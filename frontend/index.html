@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Login — Brain Hemorrhage Detection System</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <h1>Brain Hemorrhage Detection System</h1>
+    <div class="subtitle">LOGIN</div>
+
+    <form id="login-form">
+      <div class="field">
+        <label for="email">Username (email)</label>
+        <input type="email" id="email" placeholder="Enter username" required autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password" />
+      </div>
+
+      <div class="login-actions">
+        <button type="submit" class="btn btn-primary" id="login-btn">Login</button>
+        <button type="reset" class="btn btn-secondary">Reset</button>
+      </div>
+      <div class="error-text" id="error-text"></div>
+    </form>
+
+    <div class="footer-note">For Radiologists Only</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+  // If already logged in, skip straight to dashboard.
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) window.location.href = "dashboard.html";
+  })();
+
+  const form = document.getElementById("login-form");
+  const errorText = document.getElementById("error-text");
+  const loginBtn = document.getElementById("login-btn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorText.textContent = "";
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Logging in...";
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Login";
+
+    if (error) {
+      errorText.textContent = error.message;
+      return;
+    }
+    window.location.href = "dashboard.html";
+  });
+</script>
+</body>
+</html>

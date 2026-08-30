@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scan Results — Brain Hemorrhage Detection System</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <h2>Brain Hemorrhage Detection System</h2>
+  <div class="right">
+    <span data-welcome-name>Welcome, Radiologist</span>
+    <button class="btn-logout" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <nav>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="upload.html">Upload Scan</a>
+      <a href="history.html" class="active">View Results</a>
+      <a href="history.html">History</a>
+      <a href="report.html" id="reports-link">Reports</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div id="loading" style="text-align:center; padding:60px;">
+      <div class="spinner"></div>
+      <p style="color:var(--text-muted);">Loading scan…</p>
+    </div>
+
+    <div id="content" class="hidden">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <h1 style="margin:0;">Scan Results</h1>
+          <p style="color:var(--text-muted); margin:4px 0 0;">
+            Patient ID : <strong id="patient-id"></strong> &nbsp;|&nbsp;
+            Scan Date : <strong id="scan-date"></strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="results-grid">
+        <div class="image-card">
+          <img id="ct-image" src="" alt="Input CT Scan" />
+          <div class="caption">Input CT Scan</div>
+        </div>
+        <div class="image-card">
+          <img id="heatmap-image" src="" alt="Grad-CAM Heatmap" />
+          <div class="caption">Grad-CAM Heatmap</div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0;">Prediction</h3>
+          <div class="prediction-list">
+            <div><span>Hemorrhage Detected</span> <strong id="pred-detected"></strong></div>
+            <div><span>Hemorrhage Type</span> <strong id="pred-type"></strong></div>
+            <div><span>Confidence Score</span> <strong id="pred-confidence"></strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="explanation-box">
+        The highlighted region indicates the area that influenced the model prediction most.
+      </div>
+
+      <div class="page-actions">
+        <a href="report.html?id=" id="report-btn" class="btn btn-primary" style="text-decoration:none; display:inline-block;">Download Report (PDF)</a>
+        <a href="history.html" class="btn btn-secondary" style="text-decoration:none; display:inline-block;">Back</a>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+  (async () => {
+    const session = await requireSession();
+    if (!session) return;
+
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (!id) { window.location.href = "history.html"; return; }
+
+    try {
+      const scan = await fetchScanById(id);
+
+      document.getElementById("patient-id").textContent = scan.patient_id;
+      document.getElementById("scan-date").textContent = scan.scan_date;
+      document.getElementById("ct-image").src = scan.ct_scan_url;
+      document.getElementById("heatmap-image").src = scan.heatmap_url;
+      document.getElementById("pred-detected").textContent = scan.hemorrhage_detected ? "Yes" : "No";
+      document.getElementById("pred-type").textContent = scan.hemorrhage_type || "—";
+      document.getElementById("pred-confidence").textContent = scan.confidence != null ? Number(scan.confidence).toFixed(2) : "—";
+      document.getElementById("report-btn").href = `report.html?id=${scan.id}`;
+
+      document.getElementById("loading").classList.add("hidden");
+      document.getElementById("content").classList.remove("hidden");
+    } catch (err) {
+      console.error(err);
+      document.getElementById("loading").innerHTML =
+        `<p style="color:var(--danger);">Could not load this scan.</p>`;
+    }
+  })();
+</script>
+</body>
+</html>

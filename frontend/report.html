@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Report — Brain Hemorrhage Detection System</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <h2>Brain Hemorrhage Detection System</h2>
+  <div class="right">
+    <span data-welcome-name>Welcome, Radiologist</span>
+    <button class="btn-logout" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <nav>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="upload.html">Upload Scan</a>
+      <a href="history.html">View Results</a>
+      <a href="history.html">History</a>
+      <a href="report.html" class="active">Reports</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div id="loading" style="text-align:center; padding:60px;">
+      <div class="spinner"></div>
+      <p style="color:var(--text-muted);">Loading report…</p>
+    </div>
+
+    <div id="content" class="hidden card" style="max-width:720px;">
+      <h1 style="margin-top:0;">Report</h1>
+
+      <h3>Patient Information</h3>
+      <p>
+        Patient ID : <strong id="patient-id"></strong> &nbsp;&nbsp;
+        Scan Date : <strong id="scan-date"></strong>
+      </p>
+
+      <h3>Findings</h3>
+      <div class="prediction-list">
+        <div><span>Hemorrhage Detected</span> <strong id="pred-detected"></strong></div>
+        <div><span>Hemorrhage Type</span> <strong id="pred-type"></strong></div>
+        <div><span>Confidence Score</span> <strong id="pred-confidence"></strong></div>
+      </div>
+
+      <h3>Summary</h3>
+      <p id="summary-text" style="color:var(--text-muted);"></p>
+
+      <h3>Images</h3>
+      <div class="results-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="image-card">
+          <img id="ct-image" src="" alt="CT Scan" />
+          <div class="caption">CT Scan</div>
+        </div>
+        <div class="image-card">
+          <img id="heatmap-image" src="" alt="Grad-CAM Heatmap" />
+          <div class="caption">Grad-CAM Heatmap</div>
+        </div>
+      </div>
+
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="window.print()">Export as PDF</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+  (async () => {
+    const session = await requireSession();
+    if (!session) return;
+
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (!id) { window.location.href = "history.html"; return; }
+
+    try {
+      const scan = await fetchScanById(id);
+
+      document.getElementById("patient-id").textContent = scan.patient_id;
+      document.getElementById("scan-date").textContent = scan.scan_date;
+      document.getElementById("ct-image").src = scan.ct_scan_url;
+      document.getElementById("heatmap-image").src = scan.heatmap_url;
+      document.getElementById("pred-detected").textContent = scan.hemorrhage_detected ? "Yes" : "No";
+      document.getElementById("pred-type").textContent = scan.hemorrhage_type || "—";
+      document.getElementById("pred-confidence").textContent = scan.confidence != null ? Number(scan.confidence).toFixed(2) : "—";
+
+      const typeLabel = scan.hemorrhage_type
+        ? scan.hemorrhage_type.charAt(0).toUpperCase() + scan.hemorrhage_type.slice(1)
+        : "an unspecified type";
+      document.getElementById("summary-text").textContent = scan.hemorrhage_detected
+        ? `Brain hemorrhage is detected in the CT scan. Type: ${typeLabel}.`
+        : `No hemorrhage detected in the CT scan.`;
+
+      document.getElementById("loading").classList.add("hidden");
+      document.getElementById("content").classList.remove("hidden");
+
+      markReportGenerated(scan.id);
+    } catch (err) {
+      console.error(err);
+      document.getElementById("loading").innerHTML =
+        `<p style="color:var(--danger);">Could not load this report.</p>`;
+    }
+  })();
+</script>
+</body>
+</html>

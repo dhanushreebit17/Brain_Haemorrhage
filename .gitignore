@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Model weights (large — don't commit binary weights to git)
+backend/models/*.pth
+!backend/models/.gitkeep
+
+# Uploaded/temp files
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Dataset (large — don't commit training images)
+dataset/
+
+# Env files with real secrets
+.env
+frontend/js/config.local.js
+
+# OS / editor
+.DS_Store
+.vscode/
+*.log

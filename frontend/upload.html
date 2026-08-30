@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Upload CT Scan — Brain Hemorrhage Detection System</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <h2>Brain Hemorrhage Detection System</h2>
+  <div class="right">
+    <span data-welcome-name>Welcome, Radiologist</span>
+    <button class="btn-logout" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <nav>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="upload.html" class="active">Upload Scan</a>
+      <a href="history.html">View Results</a>
+      <a href="history.html">History</a>
+      <a href="history.html">Reports</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="card" style="max-width:640px;">
+      <h1 style="margin-top:0;">Upload CT Scan</h1>
+      <p style="color:var(--text-muted); margin-top:-8px;">Upload CT Scan Image (PNG / JPEG)</p>
+
+      <form id="upload-form">
+        <div class="dropzone" id="dropzone">
+          <div id="dropzone-label">Drag and Drop file here or</div>
+          <button type="button" class="btn btn-secondary" id="choose-file-btn" style="margin-top:10px;">Choose File</button>
+          <input type="file" id="file-input" accept=".png,.jpg,.jpeg" class="hidden" />
+          <div class="filename" id="filename"></div>
+        </div>
+
+        <div class="field">
+          <label for="patient-id">Patient ID</label>
+          <input type="text" id="patient-id" placeholder="Enter Patient ID" required />
+        </div>
+
+        <div class="login-actions">
+          <button type="submit" class="btn btn-primary" id="upload-btn">Upload</button>
+          <button type="button" class="btn btn-secondary" id="reset-btn">Reset</button>
+        </div>
+        <div class="error-text" id="error-text"></div>
+        <div class="spinner hidden" id="spinner"></div>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+  let session;
+  (async () => { session = await requireSession(); })();
+
+  const dropzone = document.getElementById("dropzone");
+  const fileInput = document.getElementById("file-input");
+  const filenameLabel = document.getElementById("filename");
+  const chooseBtn = document.getElementById("choose-file-btn");
+  const errorText = document.getElementById("error-text");
+  const spinner = document.getElementById("spinner");
+  const uploadBtn = document.getElementById("upload-btn");
+
+  chooseBtn.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("click", (e) => { if (e.target === dropzone) fileInput.click(); });
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) filenameLabel.textContent = fileInput.files[0].name;
+  });
+
+  ["dragover", "dragenter"].forEach(evt =>
+    dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add("dragover"); })
+  );
+  ["dragleave", "drop"].forEach(evt =>
+    dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove("dragover"); })
+  );
+  dropzone.addEventListener("drop", (e) => {
+    if (e.dataTransfer.files[0]) {
+      fileInput.files = e.dataTransfer.files;
+      filenameLabel.textContent = e.dataTransfer.files[0].name;
+    }
+  });
+
+  document.getElementById("reset-btn").addEventListener("click", () => {
+    fileInput.value = "";
+    filenameLabel.textContent = "";
+    document.getElementById("patient-id").value = "";
+    errorText.textContent = "";
+  });
+
+  document.getElementById("upload-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorText.textContent = "";
+
+    const file = fileInput.files[0];
+    const patientId = document.getElementById("patient-id").value.trim();
+    if (!file) { errorText.textContent = "Please choose a CT scan image."; return; }
+    if (!patientId) { errorText.textContent = "Please enter a Patient ID."; return; }
+
+    uploadBtn.disabled = true;
+    spinner.classList.remove("hidden");
+
+    try {
+      // 1. Send the image to the Flask/PyTorch backend for prediction + Grad-CAM
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch(`${window.CONFIG.API_BASE_URL}/api/predict`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || `Backend returned ${res.status}`);
+      }
+      const prediction = await res.json();
+
+      // 2. Store both images in Supabase Storage
+      const scanDate = new Date().toISOString().slice(0, 10);
+      const stamp = Date.now();
+      const ctPath = `${patientId}/${stamp}_ct.png`;
+      const heatmapPath = `${patientId}/${stamp}_heatmap.png`;
+
+      const [ctUrl, heatmapUrl] = await Promise.all([
+        uploadImageToStorage(window.CONFIG.BUCKET_CT_SCANS, ctPath, prediction.original_image_base64),
+        uploadImageToStorage(window.CONFIG.BUCKET_HEATMAPS, heatmapPath, prediction.heatmap_overlay_base64),
+      ]);
+
+      // 3. Insert the scan record into the `scans` table
+      // NOTE: the current model (model.py) classifies hemorrhage SUBTYPE only
+      // (epidural / intracerebral / intraventricular / subarachnoid / subdural) —
+      // it has no "normal" class yet, so hemorrhage_detected is always true here.
+      // Add a "normal" class to your dataset + retrain to get real binary detection.
+      const record = await insertScanRecord({
+        patient_id: patientId,
+        scan_date: scanDate,
+        hemorrhage_detected: true,
+        hemorrhage_type: prediction.predicted_class,
+        confidence: prediction.confidence,
+        ct_scan_url: ctUrl,
+        heatmap_url: heatmapUrl,
+        report_generated: false,
+      });
+
+      window.location.href = `results.html?id=${record.id}`;
+    } catch (err) {
+      console.error(err);
+      errorText.textContent = err.message || "Upload failed. Check the backend is running and your Supabase config is correct.";
+    } finally {
+      uploadBtn.disabled = false;
+      spinner.classList.add("hidden");
+    }
+  });
+</script>
+</body>
+</html>

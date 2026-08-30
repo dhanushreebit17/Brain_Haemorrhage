@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>History — Brain Hemorrhage Detection System</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <h2>Brain Hemorrhage Detection System</h2>
+  <div class="right">
+    <span data-welcome-name>Welcome, Radiologist</span>
+    <button class="btn-logout" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <nav>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="upload.html">Upload Scan</a>
+      <a href="history.html">View Results</a>
+      <a href="history.html" class="active">History</a>
+      <a href="report.html">Reports</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="card">
+      <h1 style="margin-top:0;">History / Records</h1>
+
+      <div class="search-row">
+        <input type="text" id="search-input" placeholder="Search Patient ID" />
+        <button class="btn btn-primary" style="flex:none;" id="search-btn">Search</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>S. No.</th><th>Patient ID</th><th>Scan Date</th><th>Result</th><th>Action</th></tr>
+        </thead>
+        <tbody id="history-body">
+          <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Loading…</td></tr>
+        </tbody>
+      </table>
+
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+  const PAGE_SIZE = 5;
+  let currentPage = 1;
+
+  async function loadHistory() {
+    const body = document.getElementById("history-body");
+    const patientId = document.getElementById("search-input").value;
+    body.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Loading…</td></tr>`;
+
+    try {
+      const { rows, total } = await fetchScanHistory({ patientId, page: currentPage, pageSize: PAGE_SIZE });
+
+      if (!rows.length) {
+        body.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No matching scans found.</td></tr>`;
+      } else {
+        body.innerHTML = rows.map((s, i) => `
+          <tr>
+            <td>${(currentPage - 1) * PAGE_SIZE + i + 1}</td>
+            <td>${s.patient_id}</td>
+            <td>${s.scan_date}</td>
+            <td><span class="badge ${s.hemorrhage_detected ? "badge-hemorrhage" : "badge-normal"}">${s.hemorrhage_detected ? "Hemorrhage" : "Normal"}</span></td>
+            <td><a class="view-link" href="results.html?id=${s.id}">View</a></td>
+          </tr>
+        `).join("");
+      }
+
+      renderPagination(total);
+    } catch (err) {
+      console.error(err);
+      body.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--danger);">Could not load history.</td></tr>`;
+    }
+  }
+
+  function renderPagination(total) {
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const el = document.getElementById("pagination");
+    let html = `<button ${currentPage === 1 ? "disabled" : ""} onclick="goToPage(1)">&laquo;</button>`;
+    html += `<button ${currentPage === 1 ? "disabled" : ""} onclick="goToPage(${currentPage - 1})">&lsaquo;</button>`;
+    for (let p = 1; p <= totalPages; p++) {
+      html += `<button class="${p === currentPage ? "active" : ""}" onclick="goToPage(${p})">${p}</button>`;
+    }
+    html += `<button ${currentPage === totalPages ? "disabled" : ""} onclick="goToPage(${currentPage + 1})">&rsaquo;</button>`;
+    html += `<button ${currentPage === totalPages ? "disabled" : ""} onclick="goToPage(${totalPages})">&raquo;</button>`;
+    el.innerHTML = html;
+  }
+
+  function goToPage(p) {
+    currentPage = p;
+    loadHistory();
+  }
+
+  document.getElementById("search-btn").addEventListener("click", () => { currentPage = 1; loadHistory(); });
+  document.getElementById("search-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { currentPage = 1; loadHistory(); }
+  });
+
+  (async () => {
+    const session = await requireSession();
+    if (!session) return;
+    loadHistory();
+  })();
+</script>
+</body>
+</html>

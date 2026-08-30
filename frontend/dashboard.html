@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — Brain Hemorrhage Detection System</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <h2>Brain Hemorrhage Detection System</h2>
+  <div class="right">
+    <span data-welcome-name>Welcome, Radiologist</span>
+    <button class="btn-logout" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <nav>
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <a href="upload.html">Upload Scan</a>
+      <a href="history.html">View Results</a>
+      <a href="history.html">History</a>
+      <a href="history.html">Reports</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <h1 style="margin-top:0;">Dashboard</h1>
+    <p style="color:var(--text-muted); margin-top:-8px;">Overview</p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="label">Total Scans Analyzed</div>
+        <div class="value" id="stat-total">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Hemorrhage Detected</div>
+        <div class="value" id="stat-hemorrhage">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Normal Scans</div>
+        <div class="value" id="stat-normal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Reports Generated</div>
+        <div class="value" id="stat-reports">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;">Recent Scans</h3>
+      <table>
+        <thead>
+          <tr><th>S. No.</th><th>Patient ID</th><th>Scan Date</th><th>Result</th><th>Action</th></tr>
+        </thead>
+        <tbody id="recent-scans-body">
+          <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+  (async () => {
+    const session = await requireSession();
+    if (!session) return;
+
+    try {
+      const stats = await fetchDashboardStats();
+      document.getElementById("stat-total").textContent = stats.total;
+      document.getElementById("stat-hemorrhage").textContent = stats.hemorrhage;
+      document.getElementById("stat-normal").textContent = stats.normal;
+      document.getElementById("stat-reports").textContent = stats.reports;
+
+      const scans = await fetchRecentScans(4);
+      const body = document.getElementById("recent-scans-body");
+      if (!scans.length) {
+        body.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No scans yet. Upload one to get started.</td></tr>`;
+        return;
+      }
+      body.innerHTML = scans.map((s, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${s.patient_id}</td>
+          <td>${s.scan_date}</td>
+          <td><span class="badge ${s.hemorrhage_detected ? "badge-hemorrhage" : "badge-normal"}">${s.hemorrhage_detected ? "Hemorrhage" : "Normal"}</span></td>
+          <td><a class="view-link" href="results.html?id=${s.id}">View</a></td>
+        </tr>
+      `).join("");
+    } catch (err) {
+      console.error(err);
+      document.getElementById("recent-scans-body").innerHTML =
+        `<tr><td colspan="5" style="text-align:center; color:var(--danger);">Could not load data. Check your Supabase config.</td></tr>`;
+    }
+  })();
+</script>
+</body>
+</html>
