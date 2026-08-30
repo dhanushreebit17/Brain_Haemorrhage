@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Register — Brain Hemorrhage Detection System</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <h1>Brain Hemorrhage Detection System</h1>
+    <div class="subtitle">REGISTER</div>
+
+    <form id="register-form">
+      <div class="field">
+        <label for="full-name">Full Name</label>
+        <input type="text" id="full-name" placeholder="Dr. Jane Doe" required autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="email">Username (email)</label>
+        <input type="email" id="email" placeholder="Enter email" required autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter password (min 6 characters)" required minlength="6" autocomplete="new-password" />
+      </div>
+      <div class="field">
+        <label for="confirm-password">Confirm Password</label>
+        <input type="password" id="confirm-password" placeholder="Re-enter password" required minlength="6" autocomplete="new-password" />
+      </div>
+
+      <div class="login-actions">
+        <button type="submit" class="btn btn-primary" id="register-btn">Create Account</button>
+        <button type="reset" class="btn btn-secondary">Reset</button>
+      </div>
+      <div class="error-text" id="error-text"></div>
+      <div class="error-text" id="success-text" style="color:var(--success);"></div>
+    </form>
+
+    <div class="footer-note">
+      Already have an account? <a href="index.html" style="color:var(--primary); font-weight:600;">Login</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+  const form = document.getElementById("register-form");
+  const errorText = document.getElementById("error-text");
+  const successText = document.getElementById("success-text");
+  const registerBtn = document.getElementById("register-btn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorText.textContent = "";
+    successText.textContent = "";
+
+    const fullName = document.getElementById("full-name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirm-password").value;
+
+    if (password !== confirmPassword) {
+      errorText.textContent = "Passwords do not match.";
+      return;
+    }
+
+    registerBtn.disabled = true;
+    registerBtn.textContent = "Creating account...";
+
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    });
+
+    registerBtn.disabled = false;
+    registerBtn.textContent = "Create Account";
+
+    if (error) {
+      errorText.textContent = error.message;
+      return;
+    }
+
+    if (data.session) {
+      window.location.href = "dashboard.html";
+    } else {
+      form.reset();
+      successText.textContent = "Account created! Check your email to confirm, then log in.";
+    }
+  });
+</script>
+</body>
+</html>

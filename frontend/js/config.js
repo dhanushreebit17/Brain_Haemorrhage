@@ -6,8 +6,8 @@
 // works within the Row Level Security rules defined in supabase/schema.sql).
 // ---------------------------------------------------------------------------
 window.CONFIG = {
-  SUPABASE_URL: "https://YOUR-PROJECT-REF.supabase.co",
-  SUPABASE_ANON_KEY: "YOUR-SUPABASE-ANON-KEY",
+  SUPABASE_URL: "https://kwvxtcnzmfdgehidrtib.supabase.co/rest/v1/",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3dnh0Y256bWZkZ2VoaWRydGliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwNjk3MjksImV4cCI6MjEwMzY0NTcyOX0.fFFaCGrGRtWCbv2Gn0xaGfH1Xv5fhS0wQglaV1fps2w",
 
   // Where your Flask backend (app.py) is running.
   // Local dev default. Change to your deployed backend URL in production.
