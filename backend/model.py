@@ -6,6 +6,7 @@ CLASS_NAMES = [
     "epidural",
     "intracerebral",
     "intraventricular",
+    "normal",
     "subarachnoid",
     "subdural",
 ]
