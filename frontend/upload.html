@@ -142,15 +142,15 @@
       // it has no "normal" class yet, so hemorrhage_detected is always true here.
       // Add a "normal" class to your dataset + retrain to get real binary detection.
       const record = await insertScanRecord({
-        patient_id: patientId,
-        scan_date: scanDate,
-        hemorrhage_detected: true,
-        hemorrhage_type: prediction.predicted_class,
-        confidence: prediction.confidence,
-        ct_scan_url: ctUrl,
-        heatmap_url: heatmapUrl,
-        report_generated: false,
-      });
+  patient_id: patientId,
+  scan_date: scanDate,
+  hemorrhage_detected: String(prediction.predicted_class).toLowerCase() !== "normal",
+  hemorrhage_type: prediction.predicted_class,
+  confidence: prediction.confidence,
+  ct_scan_url: ctUrl,
+  heatmap_url: heatmapUrl,
+  report_generated: false,
+});
 
       window.location.href = `results.html?id=${record.id}`;
     } catch (err) {
