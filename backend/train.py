@@ -1,29 +1,7 @@
-"""
-train.py
-Fine-tunes HaemorrhageNet on your dataset.
-
-Expected data layout (ImageFolder style) — produced automatically by
-prepare_dataset.py if you're using the vbookshelf CT-ICH Kaggle dataset:
-
-    dataset/
-        train/
-            Normal/            *.jpg / *.png
-            Hemorrhage/
-        val/
-            Normal/
-            Hemorrhage/
-
-(If you switch model.py to full subtype classification later, just add
-the matching subfolders — this script is agnostic to class count.)
-
-Usage:
-    python train.py --data_dir dataset --epochs 15 --batch_size 16
-"""
 
 import argparse
 import os
 import time
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
